@@ -5,7 +5,7 @@ Provide a cross-platform React Native app that gives users a lightweight mobile 
 
 ## Key decisions (to confirm before dev)
 - Platform: React Native cross-platform for MVP (iOS + Android simultaneously).
-- Auth: reuse existing session token system (server-side `session-tokens.php`) and use `Authorization: Bearer <token>`; store token in secure storage (React Native Keychain). Optionally add short-lived access + refresh tokens in a later iteration.
+- Auth: **Migration in progress** - WordPress multisite now provides native cross-domain authentication. Legacy session token system (`session-tokens.php`) maintained for mobile app compatibility during transition. Use `Authorization: Bearer <token>` and store tokens in React Native Keychain until native WordPress authentication is fully integrated.
 - API: core WP REST API + small custom extrachill endpoints. Server must accept Authorization header for mobile clients and not depend on browser cookies.
 - Access model / monetization: decide whether the app is free to full-readers or gated to logged-in users only (see Monetization & Ads section).
 
