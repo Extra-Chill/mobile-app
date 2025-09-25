@@ -1,43 +1,68 @@
 # extrachill-app — Implementation Plan
 
+**CURRENT STATUS**: Planning stage only - no React Native implementation exists yet (Rob Coker has started a prototype)
+
 ## Purpose
-Provide a cross-platform React Native app that gives users a lightweight mobile experience for community.extrachill.com (bbPress forum) and extrachill.com (articles). Use the existing WordPress + bbPress data via REST; no new central database for the MVP. Goal: improve mobile UX and increase forum engagement. Future work will integrate the store at shop.extrachill.com (WooCommerce).
+Provide a cross-platform React Native app as part of the Extra Chill multisite ecosystem. The app will be its own WordPress multisite installation with React Native frontend, leveraging WordPress multisite native authentication and content management. Goal: provide native mobile experience for community and content consumption while maintaining seamless integration with the broader Extra Chill platform.
 
-## Key decisions (to confirm before dev)
-- Platform: React Native cross-platform for MVP (iOS + Android simultaneously).
-- Auth: **Migration in progress** - WordPress multisite now provides native cross-domain authentication. Legacy session token system (`session-tokens.php`) maintained for mobile app compatibility during transition. Use `Authorization: Bearer <token>` and store tokens in React Native Keychain until native WordPress authentication is fully integrated.
-- API: core WP REST API + small custom extrachill endpoints. Server must accept Authorization header for mobile clients and not depend on browser cookies.
-- Access model / monetization: decide whether the app is free to full-readers or gated to logged-in users only (see Monetization & Ads section).
+## Implementation Status
+- **Planning**: Complete - comprehensive architectural planning documented below
+- **WordPress Backend**: Not started - no multisite installation created yet
+- **React Native Frontend**: Not started - no React Native project initialized
+- **Development Environment**: Not configured - no package.json, dependencies, or build scripts exist
+- **Current Directory Contents**: Only this planning document (plan.md)
 
-## MVP features
-- Login / logout via community theme integration (primary entry point)
-- Browse forums: topic lists and thread view (core functionality)
-- Create topic and reply to threads (engagement features)
-- Basic search (posts & threads)
-- Browse article feed (list by latest/category) with images (secondary priority)
-- Article detail view with comments (secondary priority)
-- Secure token storage (React Native Keychain) and lightweight local cache for recently viewed content
+## Architecture Overview
+- **Platform**: WordPress multisite installation with React Native frontend
+- **Database**: Own WordPress database as part of multisite network (standard multisite architecture)
+- **Content Management**: WordPress backend with Gutenberg blocks using Block Data API
+- **Authentication**: Native WordPress multisite authentication across all Extra Chill properties
+- **Data Access**: WordPress multisite native functions (no REST API dependencies for internal content)
+- **Frontend**: React Native consuming WordPress Block Data API and native multisite functions
 
-## Server/API requirements
-- Verify and harden endpoints the app will consume:
-  - Login: `/wp-json/extrachill/v1/handle_external_login` (`extrachill-integration/seamless-login.php`)
-  - Token validate: `/wp-json/extrachill/v1/validate_token` (`extrachill-integration/validate-session.php`)
-  - User details: `/wp-json/extrachill/v1/user_details` (`extrachill-integration/get-user-details.php`)
-  - Forum endpoints: bbPress REST routes + custom community endpoints (`extrachill-custom/community-integration/`)
-- Add / confirm: device token registration (APNs) if planning push, pagination & search params optimized for mobile, and rate limiting protections.
-- Ensure Authorization header handling and HTTPS enforcement; avoid tokens in URLs.
+## Key Technical Decisions
+- **Platform**: React Native cross-platform for iOS + Android
+- **Backend**: WordPress multisite installation (app.extrachill.com or similar)
+- **Authentication**: Native WordPress multisite - users automatically logged in across all Extra Chill sites
+- **Content**: Gutenberg blocks with Block Data API for flexible, native content management
+- **Data Flow**: Multisite native functions for cross-site content (forum activity, user data, etc.)
+- **API Layer**: WordPress Block Data API + WordPress REST API for React Native integration
 
-## Themes & code to coordinate
-- `extrachill` theme — blog REST compatibility: `/Users/chubes/Local Sites/community-stage/app/public/wp-content/themes/extrachill`
-- `extrachill-community` theme — main user & bbPress integration; confirm REST hooks and session flow: `/Users/chubes/Local Sites/community-stage/app/public/wp-content/themes/extrachill-community`
-- `extrachill-shop` — future WooCommerce store integration (shop.extrachill.com); plan deep-linking and product endpoints for Phase 2: `/Users/chubes/Local Sites/community-stage/app/public/wp-content/themes/extrachill-shop`
-- Integration plugins / PHP files to audit/extend:
-  - `extrachill-integration/session-tokens.php`
-  - `extrachill-integration/validate-session.php`
-  - `extrachill-integration/seamless-login.php`
-  - `extrachill-integration/get-user-details.php`
-  - `extrachill-custom/community-integration/community-comments.php`
-- See `CLAUDE.md` for background and architecture documentation.
+## MVP Features
+- **Native Authentication**: Seamless login via WordPress multisite (no custom tokens needed)
+- **Forum Integration**: Browse community.extrachill.com forums via multisite functions
+- **Content Consumption**: Articles from extrachill.com via multisite content sharing
+- **Gutenberg Content**: Native WordPress content management with blocks
+- **User Profiles**: Unified user experience across entire multisite network
+- **Search**: Cross-site search using multisite native functions
+- **Notifications**: Push notifications for forum activity and content updates
+
+## Technical Architecture
+- **WordPress Multisite**: New site in Extra Chill network (e.g., app.extrachill.com)
+- **React Native Frontend**: Consumes WordPress Block Data API for content rendering
+- **Content Management**: Admin uses Gutenberg blocks for app-specific content
+- **Cross-Site Integration**: Uses `switch_to_blog()` / `restore_current_blog()` patterns for forum/content access
+- **Authentication Flow**: Native WordPress authentication eliminates custom session management
+- **Block Data API**: Structured content delivery optimized for mobile consumption
+
+## Multisite Integration Patterns
+The app leverages existing multisite functions from the Extra Chill ecosystem:
+
+### **Forum Integration**
+- Uses `ec_fetch_forum_results_multisite()` for cross-site forum search
+- Leverages `ec_fetch_recent_activity_multisite()` for community activity feeds
+- Access bbPress data via `switch_to_blog()` patterns to community.extrachill.com
+
+### **Content Integration**
+- Articles from extrachill.com via multisite content queries
+- User authentication via native WordPress multisite functions
+- Cross-site user data access using `preload_user_details()` patterns
+
+### **Native Functions Available**
+- Direct blog ID access (hardcoded as 2) - Community site access
+- `preload_user_details()` - User authentication state
+- `is_user_ad_free()` - User subscription status
+- All existing multisite patterns from themes and plugins
 
 ## Monetization & Ads (Mediavine)
 - Current site revenue comes from Mediavine ads injected into web pages. Native apps do not run the same JS ad slots by default.
@@ -47,40 +72,88 @@ Provide a cross-platform React Native app that gives users a lightweight mobile 
   3. Integrate a native ad solution (AdMob / other) inside the app and map placements to web layout; requires implementing ad SDKs and updating privacy/consent flows.
 - Recommendation for MVP: do not attempt Mediavine inside the native app. Launch without ads and require account sign-in for access OR provide limited preview to anonymous users. Track metrics and revisit monetization in Phase 2.
 
-## React Native technical notes
-- Networking: central APIClient using Axios/fetch with `Authorization: Bearer` headers; support pagination and error handling.
-- Storage: React Native Keychain or encrypted AsyncStorage for tokens and profile cache; Phase 2 adds offline database (SQLite/Realm) for caching and write queue.
-- UI: React Native components with React Navigation; FlatList for efficient feeds; Fast Image library for image loading and caching.
-- State Management: Context API or Redux for global state management; async/await for data fetching.
-- Launch flow: validate token on app startup; prompt re-login on invalid/expired token.
-- WebView fallback: implement react-native-webview component for cases where showing the original page (with ads or complex embeds) is necessary.
+## React Native Technical Implementation
+- **Content API**: WordPress Block Data API for structured content consumption
+- **Authentication**: Native WordPress multisite - no custom token management needed
+- **Data Layer**: WordPress REST API + custom multisite function endpoints
+- **Storage**: React Native storage for app preferences; WordPress handles all content and user data
+- **UI Components**: React Native with React Navigation; render Gutenberg blocks as native components
+- **State Management**: Context API for app state; WordPress multisite provides user authentication state
+- **Content Rendering**: Parse Gutenberg block data into React Native components
+- **Offline Support**: Optional caching layer for content consumption when offline
 
-## First sprint (deliverables)
-1. Backend audit: confirm community theme endpoints, bbPress integration, Authorization header handling, and CORS behavior for mobile.
-2. Decide access model (open vs account-required) and note any server gating required.
-3. React Native scaffold: project setup, APIClient, secure storage helper, Login screen via community theme.
-4. Forum core functionality: topic list + thread view; implement create‑reply and create‑topic flows.
-5. Forum authentication: login/logout flow integrated with community theme endpoints.
-6. QA: login/logout, token validation, forum posting capabilities, and basic automated tests.
+## Development Approach
+- **WordPress Backend**: Set up new multisite installation (app.extrachill.com)
+- **Gutenberg Integration**: Create mobile-optimized block templates for app content
+- **React Native Setup**: Configure RN app to consume WordPress Block Data API
+- **Multisite Functions**: Leverage existing forum/content integration patterns
+- **Block Rendering**: Map Gutenberg blocks to React Native components
 
-## Timeline (example)
-- Week 1: Backend audit + React Native scaffold + community theme login integration
-- Week 2: Forum browse & basic posting functionality  
-- Week 3: Complete forum features + article integration (secondary)
-- Week 4: QA, polish, build distribution (iOS + Android)
+## Implementation Phases
 
-## Acceptance criteria
-- Secure login via community theme integration with token stored in React Native secure storage and used for protected requests.
-- Users can browse forum threads and topics reliably in the app (primary functionality).
-- Users can create topics/replies and see them on the live community site.
-- Users can browse articles (secondary functionality after forum features are complete).
-- No new central DB for MVP; use existing WP + bbPress tables.
+### **Phase 1: Multisite WordPress Backend**
+1. **Multisite Setup**: Create new WordPress site in Extra Chill network (app.extrachill.com)
+2. **Gutenberg Configuration**: Set up mobile-optimized block templates and content structure
+3. **Multisite Integration**: Implement cross-site content access using existing patterns
+4. **Block Data API**: Configure WordPress to serve structured block data for React Native
+5. **Authentication Testing**: Verify native WordPress multisite authentication works across sites
 
-## Open questions
-- Keep current long‑lived server tokens or implement short access + refresh tokens now?
-- Required offline support level for MVP (none / shallow cache / full DB)?
-- Include push notifications in Phase 1 or defer?
-- Access model: require account to access app or allow anonymous preview?
+### **Phase 2: React Native Frontend**
+1. **React Native Project**: Initialize cross-platform RN project with WordPress Block Data API integration
+2. **Block Rendering**: Create React Native components that render Gutenberg blocks
+3. **Navigation**: Implement React Navigation with app screens (Forum, Content, Profile, etc.)
+4. **Authentication Integration**: Connect to WordPress multisite authentication state
+5. **Content Display**: Forum integration using multisite functions, article consumption
 
-## Next steps
-Confirm token lifecycle choice, offline caching level, React Native cross-platform decision, and access/monetization approach. After confirmation I will provide detailed task breakdowns, example API request/response shapes, and starter React Native code for the APIClient, secure storage helper, and WebView component.
+### **Phase 3: Forum Integration**
+1. **Community Access**: Leverage `ec_fetch_forum_results_multisite()` and activity functions
+2. **Forum Browsing**: Topic lists, thread views using existing multisite patterns
+3. **User Interaction**: Topic/reply creation through WordPress API integration
+4. **Search Integration**: Cross-site search using existing multisite search functions
+
+### **Phase 4: Polish & Launch**
+1. **Performance Optimization**: Caching strategies for content and user data
+2. **Push Notifications**: Community activity and content update notifications
+3. **Testing**: Comprehensive testing across iOS/Android platforms
+4. **App Store Deployment**: Build and deploy to App Store and Google Play
+
+## Acceptance Criteria
+- **Native Authentication**: Users automatically logged in via WordPress multisite
+- **Content Management**: Admin can create app content using Gutenberg blocks
+- **Forum Integration**: Users can browse and interact with community.extrachill.com forums
+- **Cross-Site Content**: Seamless access to extrachill.com articles and content
+- **Unified Experience**: Consistent user experience across entire Extra Chill network
+
+## Technical Benefits
+- **No Custom Authentication**: WordPress multisite handles all user management
+- **Content Flexibility**: Gutenberg blocks provide rich, flexible content management
+- **Performance**: Direct multisite queries eliminate HTTP API overhead for internal content
+- **Scalability**: Standard WordPress multisite architecture with proven patterns
+- **Integration**: Leverages all existing Extra Chill multisite functions and data flows
+
+## Next Steps (Implementation Readiness)
+
+### Phase 1: Development Environment Setup
+1. **React Native Project**: Initialize React Native project with proper directory structure
+2. **Package Dependencies**: Set up package.json with required React Native and WordPress integration dependencies
+3. **Development Scripts**: Create npm scripts for development, build, and testing
+4. **Environment Configuration**: Configure development environment for WordPress API integration
+
+### Phase 2: WordPress Backend Implementation
+1. **Multisite Planning**: Confirm subdomain (app.extrachill.com) and multisite installation approach
+2. **Content Strategy**: Define Gutenberg block templates and content structure for mobile optimization
+3. **API Endpoints**: Set up WordPress Block Data API and custom endpoints for React Native
+
+### Phase 3: React Native Frontend Development
+1. **React Native Architecture**: Implement Block Data API integration patterns and component mapping
+2. **Integration Scope**: Leverage existing multisite functions and extend as needed
+3. **Development Timeline**: Establish development milestones and deployment timeline
+
+**Current Priority**: Phase 1 - Development Environment Setup (no React Native code exists yet)
+
+After architectural confirmation, detailed implementation guides will be provided for:
+- WordPress multisite setup and configuration
+- Gutenberg Block Data API integration
+- React Native block rendering components
+- Multisite function integration patterns
+- Authentication flow implementation
